@@ -11,7 +11,7 @@ jobs:
 
     steps:
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Deploy to EC2
@@ -23,13 +23,13 @@ jobs:
 
           script: |
 
-            # install git
+            # Install git if missing
             if ! command -v git &> /dev/null
             then
               sudo dnf install git -y
             fi
 
-            # install docker
+            # Install docker if missing
             if ! command -v docker &> /dev/null
             then
               sudo dnf install docker -y
@@ -37,7 +37,13 @@ jobs:
               sudo systemctl enable docker
             fi
 
-            # clone repo if not exists
+            # Install docker compose plugin
+            if ! docker compose version &> /dev/null
+            then
+              sudo dnf install docker-compose-plugin -y
+            fi
+
+            # Clone repo if not exists
             if [ ! -d "backend-docker" ]; then
               git clone https://github.com/virugamacoder/backend-docker.git
             fi
@@ -46,9 +52,8 @@ jobs:
 
             git pull origin main
 
-            docker stop node-api || true
-            docker rm node-api || true
+            # Stop old containers
+            docker compose down || true
 
-            docker build -t node-api .
-
-            docker run -d -p 3000:3000 --name node-api node-api
+            # Build and run containers
+            docker compose up -d --build

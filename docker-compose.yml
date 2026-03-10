@@ -4,10 +4,14 @@ services:
 
   api:
     build: .
+    container_name: node-api
     ports:
       - "3000:3000"
+    depends_on:
+      - mongo
 
   mongo:
     image: mongo
+    container_name: mongo-db
     ports:
       - "27017:27017"
