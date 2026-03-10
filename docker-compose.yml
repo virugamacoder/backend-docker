@@ -1,17 +1,35 @@
-version: "3"
+version: "3.9"
 
 services:
 
   api:
-    build: .
+    image: ${DOCKER_USERNAME}/node-api:latest
     container_name: node-api
+    restart: always
     ports:
       - "3000:3000"
+    environment:
+      NODE_ENV: production
+      MONGO_URL: mongodb://mongo:27017/appdb
     depends_on:
       - mongo
+    networks:
+      - backend-network
 
   mongo:
-    image: mongo
+    image: mongo:7
     container_name: mongo-db
+    restart: always
     ports:
       - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

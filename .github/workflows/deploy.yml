@@ -49,57 +49,75 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
+            echo "===== Production Zero-Downtime Deploy ====="
 
-            echo "Installing Docker..."
+            echo "Ensure Docker running"
             sudo dnf install docker -y || true
-
-            echo "Starting Docker..."
             sudo systemctl start docker
+            sudo systemctl enable docker
 
-            echo "Pulling latest image..."
+            echo "Pull latest image"
             docker pull ${{ secrets.DOCKER_USERNAME }}/node-api:latest
 
-            echo "Cleaning previous GREEN container..."
-            docker stop node-api-green || true
-            docker rm node-api-green || true
+            echo "Detect running container..."
 
-            echo "Starting new container (GREEN)..."
-            docker run -d -p 3001:3000 --name node-api-green \
+            ACTIVE_PORT=$(docker ps --format '{{.Ports}}' | grep -oE '0\.0\.0\.0:(3000|3001)' | cut -d: -f2)
+
+            if [ "$ACTIVE_PORT" = "3000" ]; then
+                NEW_PORT=3001
+            elif [ "$ACTIVE_PORT" = "3001" ]; then
+                NEW_PORT=3000
+            else
+                echo "First deployment"
+                NEW_PORT=3000
+            fi
+
+            echo "Active Port: $ACTIVE_PORT"
+            echo "New Port: $NEW_PORT"
+
+            echo "Starting new container..."
+
+            docker run -d \
+            -p $NEW_PORT:3000 \
+            --name node-api-$NEW_PORT \
+            --restart always \
             ${{ secrets.DOCKER_USERNAME }}/node-api:latest
 
             if [ $? -ne 0 ]; then
-              echo "Container start failed → rollback"
-              exit 1
+                echo "Container start failed"
+                exit 1
             fi
 
             echo "Waiting for container..."
-            sleep 5
+            sleep 6
 
-            echo "Health check..."
-            if curl -f http://localhost:3001
-            then
+            echo "Running health check..."
 
-              echo "Switching Nginx traffic..."
+            curl -f http://localhost:$NEW_PORT
 
-              sudo sed -i 's/localhost:3000/localhost:3001/' /etc/nginx/conf.d/node-api.conf
+            if [ $? -ne 0 ]; then
+                echo "Health check failed → rollback"
 
-              sudo nginx -t
-              sudo systemctl reload nginx
+                docker stop node-api-$NEW_PORT
+                docker rm node-api-$NEW_PORT
 
-              echo "Stopping old container..."
-              docker stop node-api || true
-              docker rm node-api || true
-
-              echo "Renaming new container..."
-              docker rename node-api-green node-api
-
-            else
-
-              echo "Health check failed → rollback"
-
-              docker stop node-api-green
-              docker rm node-api-green
-
-              exit 1
-
+                exit 1
             fi
+
+            echo "Health check passed"
+
+            echo "Switching Nginx traffic..."
+
+            sudo sed -i "s/localhost:[0-9]*/localhost:$NEW_PORT/" /etc/nginx/conf.d/node-api.conf
+
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "Stopping old container..."
+
+            if [ ! -z "$ACTIVE_PORT" ]; then
+                docker stop node-api-$ACTIVE_PORT || true
+                docker rm node-api-$ACTIVE_PORT || true
+            fi
+
+            echo "Deployment successful"
