@@ -4,7 +4,7 @@ const app = express();
 
 app.get("/", (req, res) => {
   res.json({
-    message: "Node API running with Docker 🚀 CI CD Github Push Test 1"
+    message: "Node API running with Docker 🚀 CI CD Github Push Test 2"
   });
 });
 
