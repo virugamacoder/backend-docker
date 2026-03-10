@@ -23,37 +23,47 @@ jobs:
 
           script: |
 
-            # Install git if missing
+            echo "Updating system packages"
+            sudo dnf update -y
+
+            echo "Installing git if missing"
             if ! command -v git &> /dev/null
             then
               sudo dnf install git -y
             fi
 
-            # Install docker if missing
+            echo "Installing docker if missing"
             if ! command -v docker &> /dev/null
             then
               sudo dnf install docker -y
               sudo systemctl start docker
               sudo systemctl enable docker
+              sudo usermod -aG docker ec2-user
             fi
 
-            # Install docker compose plugin
-            if ! docker compose version &> /dev/null
+            echo "Installing docker-compose if missing"
+            if ! command -v docker-compose &> /dev/null
             then
-              sudo dnf install docker-compose-plugin -y
+              sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+              -o /usr/local/bin/docker-compose
+
+              sudo chmod +x /usr/local/bin/docker-compose
             fi
 
-            # Clone repo if not exists
+            echo "Cloning repo if not exists"
             if [ ! -d "backend-docker" ]; then
               git clone https://github.com/virugamacoder/backend-docker.git
             fi
 
             cd backend-docker
 
+            echo "Pull latest code"
             git pull origin main
 
-            # Stop old containers
-            docker compose down || true
+            echo "Stopping old containers"
+            docker-compose down || true
 
-            # Build and run containers
-            docker compose up -d --build
+            echo "Building and starting containers"
+            docker-compose up -d --build
+
+            echo "Deployment completed"
