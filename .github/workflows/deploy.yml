@@ -65,43 +65,43 @@ jobs:
             echo "Starting new container (GREEN)..."
 
             docker run -d -p 3001:3000 --name node-api-green ${{ secrets.DOCKER_USERNAME }}/node-api:latest
-          echo "Waiting for container..."
+            echo "Waiting for container..."
 
-          sleep 5
+            sleep 5
 
-          echo "Health check..."
+            echo "Health check..."
 
-          if curl -f http://localhost:3001
-          then
+            if curl -f http://localhost:3001
+            then
 
-            echo "New container healthy → switching traffic"
+              echo "New container healthy → switching traffic"
 
-            sudo sed -i 's/localhost:3000/localhost:3001/' /etc/nginx/conf.d/node-api.conf
+              sudo sed -i 's/localhost:3000/localhost:3001/' /etc/nginx/conf.d/node-api.conf
 
-            echo "Testing nginx configuration"
-            sudo nginx -t   
+              echo "Testing nginx configuration"
+              sudo nginx -t   
 
-            echo "Reloading nginx"
-            sudo systemctl reload nginx
+              echo "Reloading nginx"
+              sudo systemctl reload nginx
 
-            echo "Stopping old container"
+              echo "Stopping old container"
 
-            docker stop node-api || true
+              docker stop node-api || true
 
-            echo "Removing old container"
-            docker rm node-api || true
+              echo "Removing old container"
+              docker rm node-api || true
 
-            echo "Renaming new container to node-api"
-            docker rename node-api-green node-api
+              echo "Renaming new container to node-api"
+              docker rename node-api-green node-api
 
-          else
-            
-            echo "Deployment failed → rollback"
+            else
+              
+              echo "Deployment failed → rollback"
 
-            echo "Stopping new container"
-            docker stop node-api-green
+              echo "Stopping new container"
+              docker stop node-api-green
 
-            echo "Removing new container"
-            docker rm node-api-green
+              echo "Removing new container"
+              docker rm node-api-green
 
-          fi
+            fi
