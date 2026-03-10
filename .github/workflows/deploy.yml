@@ -50,32 +50,58 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
 
+            echo "Installing Docker..."
             sudo dnf install docker -y || true
+
+            echo "Starting Docker..." 
             sudo systemctl start docker
+
+            echo "Enabling Docker on boot..."
             sudo systemctl enable docker
 
+            echo "Pulling latest image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/node-api:latest
 
             echo "Starting new container (GREEN)..."
 
             docker run -d -p 3001:3000 --name node-api-green ${{ secrets.DOCKER_USERNAME }}/node-api:latest
+          echo "Waiting for container..."
 
-            echo "Waiting for container health..."
-            sleep 5
+          sleep 5
 
-            curl -f http://localhost:3001 || exit 1
+          echo "Health check..."
 
-            echo "Switching Nginx traffic..."
+          if curl -f http://localhost:3001
+          then
+
+            echo "New container healthy → switching traffic"
 
             sudo sed -i 's/localhost:3000/localhost:3001/' /etc/nginx/conf.d/node-api.conf
 
-            sudo nginx -t
+            echo "Testing nginx configuration"
+            sudo nginx -t   
 
+            echo "Reloading nginx"
             sudo systemctl reload nginx
 
-            echo "Removing old container..."
+            echo "Stopping old container"
 
             docker stop node-api || true
+
+            echo "Removing old container"
             docker rm node-api || true
 
+            echo "Renaming new container to node-api"
             docker rename node-api-green node-api
+
+          else
+            
+            echo "Deployment failed → rollback"
+
+            echo "Stopping new container"
+            docker stop node-api-green
+
+            echo "Removing new container"
+            docker rm node-api-green
+
+          fi
