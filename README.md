@@ -1,9 +1,3 @@
-Below is a **single README-style guide** you can save as `DEVOPS_DOCKER_FLOW.md`.
-It summarizes **end-to-end Docker + CI/CD + AWS EC2 + Nginx + Zero-Downtime deployment** in a **standard industry flow**.
-
-You can copy everything below directly into a file.
-
----
 
 
 # Full DevOps Flow (Docker + CI/CD + AWS + Nginx + Zero Downtime)
@@ -24,6 +18,7 @@ This guide explains **how production backend deployments work in industry enviro
 
 # 1. System Architecture Overview
 
+```
 Production flow:
 
 User
@@ -34,6 +29,9 @@ Docker Container (Node API)
  ↓
 MongoDB / Other Services
 
+```
+
+```
 Deployment pipeline:
 
 Developer Push
@@ -51,13 +49,14 @@ EC2 Server pulls image
 Deploy container
  ↓
 Nginx routes traffic
+```
 
 ---
 
 # 2. Project Folder Structure
 
 Example backend project:
-
+```
 backend-project/
 │
 ├── server.js
@@ -67,7 +66,7 @@ backend-project/
 └── .github/
     └── workflows/
         └── deploy.yml
-
+```
 ---
 
 # 3. Node API Example
@@ -87,7 +86,7 @@ app.get("/", (req, res) => {
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });
-
+```
 
 ---
 
@@ -533,7 +532,7 @@ Use:
 
 
 # 18. Final Production Stack
-
+```
 Node.js API
 ↓
 Docker Container
@@ -549,7 +548,7 @@ Nginx Reverse Proxy
 Blue-Green Deployment
 ↓
 Zero Downtime Production System
-
+```
 ---
 
 
